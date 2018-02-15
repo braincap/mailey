@@ -31,7 +31,7 @@
   * String 'google' is already coded internally in GoogleStrategy code which passport uses to without any specific declaration from our end
   * Whenever any user comes to this path, we kick them to the OAuth flow managed entirely by passport
   * Scope specifies google which details we need. Profile and Email in this case
-  * Accessing /auth/google throws user to Google for Auth. After user accepts, google redirects user to redirect URI with a **code******
+  * Accessing /auth/google throws user to Google for Auth. After user accepts, google redirects user to redirect URI with a **code**
 * Add a second route handler for redirect URI /auth/google/callback and let passport handle it using GoogleStrategy by passing 'google' string as argument
 
   * Passport sees the **code** that was sent by google on callback URI and then does a follow-up request automatically with google using the code to fetch profile of the user. After the return of follow-up request and fetching user profile, the function on second argument of GoogleStrategy configuration is executed
