@@ -37,3 +37,26 @@
   * Passport sees the **code** that was sent by google on callback URI and then does a follow-up request automatically with google using the code to fetch profile of the user. After the return of follow-up request and fetching user profile, the function on second argument of GoogleStrategy configuration is executed
   * Access Token is like certificate that can be shown to google again in future to regain same privileges on user's behalf
   * Refresh Token allows to automatically update Access Token which expires after some time
+
+- Install nodemon
+- Add in package.json > "scripts" - "dev": "nodemon index.js"
+
+---
+
+Refactoring
+
+* Changing project structure
+  | Folder Name | Purpose |
+  | ------------- | ------------- | ----- |
+  | config | Protected API keys and settings |
+  | routes | All route handlers, grouped by purpose |
+  | services | Helper modules and business logic |
+  | file > index.js | Helper modules and business logic |
+
+* Move all authentication routes to authRoutes.js file
+* Move passport configuration to passport.js file
+* require the ./services/passport.js file on top of index file so that it gets executed and hence configured. Since nothing is being returned, just keep the require and don't assign it to anything
+* import passport (original) in the authRoutes file
+* To make all routes available to the "app" object in index.js, wrap all routes inside an arrow function with "app" object as parameter and then module.exports()
+* In index.js, call this authRoutes function by passing "app" as a parameter
+* 
