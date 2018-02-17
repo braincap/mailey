@@ -150,12 +150,15 @@ Dev vs Prod
 
 * Dev keys can remain in personal laptops whereas Prod keys should be in Heroku server
 * Create new prod accounts
+
   * new MLab (emaily-prod) with new user account
   * new Google API credentials
     * Authorized redirect URIs to Heroku url/auth/google/callback
       * Heroku open
       * Copy opened URL to this field with /auth/google/callback
     * Authorized JS origins to Heroku url as it is
+    * For callback paths that are relative: Google doesn't trust proxied request (Heroku's load balancer in this case). So it returns the callback not to https but to http, which is different from our original Heroku server. We have to tell GoogleStrategy to trust all proxies between our server and Google
+      * add `proxy: true` to GoogleStrategy config object
   * Start committing keys.js which will now not contain keys but logic to choose dev.js or prod.js
   * Make config > dev.js and move contents from keys.js to dev.js
   * Add logic in keys.js to return proper keys file based on node environment
@@ -163,6 +166,6 @@ Dev vs Prod
 
 * Update Heroku's env variables with Prod keys
   * www.heroku.com > settings > Config Variables
-  *  NODE_ENV is already set to 'production' in Heroku
-  *  Set Google, Mongo and Cookie keys in Heroku's variables
-* 
+  * NODE_ENV is already set to 'production' in Heroku
+  * Set Google, Mongo and Cookie keys in Heroku's variables
+* Commit and Push to Heroku and then `heroku open`
