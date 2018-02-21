@@ -356,3 +356,64 @@ Payments
 * **Flow:** User clicks "Add Credits" > Tell Stripe to show a credit card form > User enters credit card details > Details sent directly from the form to stripe > Stripe sends back a token representing the charge > We send token to our API > Our API confirms the charge was successful with Stripe > Add credits to user's account
 * Make account in stripe and get keys for the api
 * `npm install --save react-stripe-checkout`
+* Create account in Stripe and get keys
+* Add publishable and secret keys in dev.js
+* Add both in prod.js for Heroku and add the same in Heroku website
+* All these keys will be for use in Server side only. If we export this to client end, all keys here will be exposed to public via client side
+* Client side only cares about publishable key and can freely be exposed
+* To store and make available keys everywhere in react client side, make .env.development and .env.production files inside the client directory. All variable names should start with REACT _APP _
+  * Make a variable REACT_APP_STRIPE_KEY=stripe's_publishable_key inside .env.dev and .env.prop files
+  * All these variables are now available as process.env.REACT_APP_STRIPE_KEY
+* New components > Payments.js
+* Create and export react class component which render returns stripe checkout component
+* Stripe defaults to USD cents. Send amount as props in the component. Set token props to the callback function after we receive the authentication from stripe. Set stripeKey to process.env.REACT_APP_STRIPE_KEY
+* Show this component in Header
+* After "Pay Card" action, Stripe sends back a token in the callback function
+* Add name and description to Payments component for user's clarity
+* We can pass a custom button as a child to StripeComponent for better styled button
+
+* **Flow :** App boots up > Fetch current user > Header up to date. User pays money > Response sends back user > Header up to date
+* Create new action creator: handleToken, which makes a post request to api `/api/stripe` with the token
+* This action creator will dispatch updated user model. We can reuse FETCH_USER action here
+* We need to hook this token dispatcher up with Payment component using connect and import actions
+* Call action creator handleToken from 'token received' callback of stripe
+* **In server :** Create a route to handle post request from stripe's callback's action creator
+* Make a new folder for "Billing" routes and write a route for `/api/stripe`
+* `npm install --save stripe`. This is used in backend to take token from client and create a charge for stripe api. Token is like a source of money
+* Express doesn't by default parses payload of POST requests. We need `body-parser` middleware to do so. Payload is then available in req.body. `npm install --save body-parser`. Add it as middleware in index.js
+* Create a stripe charges object using amount, currency, description and source which is the token that was passed from client's post call
+* Above is an async method so use async-await
+* Add "Credits" property to user model to keep track of user's credits
+* Get current user (req.user) and update current user model, save it, and send it back as response
+* We need to protect this route for logged in users only. We can add `if(!req.user) {res.status(401).send({error: 'You must logged in'})}` at the very start of the block. Not very reusable though
+* We create a new middleware which checks for some paths that the user is logged in
+
+  * Create middlewares > requireLogin.js
+  * Define and export an arrow function
+  * Since middlewares are functions that takes the incoming request and has the ability to modify it, we take in req, res and next arguments in this function. next is a function that we call after the middleware is complete. Calling next passes req on to the next middleware in the chain
+  * Use this middleware in stripe post route before passing on to the stripe charge creation code
+
+* **In client :** Show credits in header of the application
+* In header.js, show a text to show user's credits from `this.props.auth.credits`
+
+---
+
+Deploying to Heroku (this time with react)
+
+* In production, there are 3 types of routes
+  * 1st: API routes like /auth/google, /api/current_user. Express must handle this like it always does. No change needed.
+  * 2nd: Client routes like /surveys, /surverys/new. These are react router routes and Express must send back the index.html file which knows how to handle these since index.html **is** the client
+  * 3rd: Client side file which resides in "/client/build/static/js/main.js" and are required by index.html for its processes. These are the JS/CSS files bundled by react on `npm run build`. Express must return them as it is
+* We have to tell express to be aware of these other 2 options
+* In server root index.js, before starting listening to requests, add codes as below
+  * `if (process.env.NODE_ENV) === 'production') {}`: We need to do this only for production since client and server and served from same server in production
+  * Add `app.use(express.static('client/build'))`. For every route in express that doesn't have any route handler setup, lookup in client/build folder and try to see if there's any file that matches the request file name
+  * Add `app.get('*',res.sendFile-html)`. For any non-matching route, just serve up the html document
+  * Express first sends the file if it exists in client/build. Else, index.html is the catch-all situation
+* Need to push all code to Heroku and tell it to deploy the code
+  * **Flow :** Push to Heroku > Heroku installs server deps > Heroku runs `heroku-postbuild` > We tell Heroku to install client deps > We tell Heroku to run `npm run build`
+  * Heroku doesn't care about Client's package.json. Only about server
+  * **In server :** In scripts, add "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install --prefix client && npm run build --prefix client"
+    * This tells Heroku that after regular npm install of server after deployment, go inside client and run a npm install there. And then, again inside client, do a npm run build. Setting the config_production=false tells Heroku to install dev dependencies as well (instead of just the production dependencies which is default)
+    * Commit and Push
+  * 
