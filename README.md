@@ -345,7 +345,7 @@ Improving landing page
 
 * New components > Landing.js
 * Create and Export a Welcome page using a stateless react component
-* Make Emaily logo clicky. <a> tag navigates to a completely different HTML document. <Link> tags navigate to a different route rendered by React Router
+* Make Emaily logo clicky. `<a>` tag navigates to a completely different HTML document. <Link> tags navigate to a different route rendered by React Router
 * Import Link from react-router-dom. Replace logo's anchor tag with Link tag. Use to={} tell destination based on user's logged in status
 
 ---
@@ -412,8 +412,58 @@ Deploying to Heroku (this time with react)
   * Express first sends the file if it exists in client/build. Else, index.html is the catch-all situation
 * Need to push all code to Heroku and tell it to deploy the code
   * **Flow :** Push to Heroku > Heroku installs server deps > Heroku runs `heroku-postbuild` > We tell Heroku to install client deps > We tell Heroku to run `npm run build`
-  * Heroku doesn't care about Client's package.json. Only about server
-  * **In server :** In scripts, add "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install --prefix client && npm run build --prefix client"
+  * Heroku doesn't care about Client's package.json. Only about server. We thus tell Heroku explicitly to install client modules by using --prefix client
+  * **In server :** In scripts, add `"heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install --prefix client && npm run build --prefix client"`
     * This tells Heroku that after regular npm install of server after deployment, go inside client and run a npm install there. And then, again inside client, do a npm run build. Setting the config_production=false tells Heroku to install dev dependencies as well (instead of just the production dependencies which is default)
     * Commit and Push
-  * 
+
+---
+
+Building Surveys
+
+* Create a model class to define a new Survey
+* New file: models > Survey.js
+* Users will have Surveys documents. Surveys document will have Recipients sub-documents which is a list of email ids and a clicked? flag
+* New file: models > Recipients.js
+* Recipients is a sub-document and hence won't be registered with mongoose as a model
+  * Export this sub-document and import it into Surveys.js model
+* Since surveys are of each user, define an attribute `_user: {type: Schema.Types.ObjectId, ref: 'User'}`
+  * With this, we tell SurveySchema that every survey will belong to a particular user. Every schema will be saved with the id of the user. 'ref' tells a reference to the 'User' model
+  * `_user` exact variable name is not required but is good convention to denote a field that links other models (i.e. references)
+
+API endpoint to create and save surveys
+
+* New routes > surveyRoutes.js. Module.exports all routes and then add this route configuration in index.js
+* Add a `/api/surveys` post route and ensure user is logged in, and user has enough credits
+* Make and add a middleware to check if a user has enough credits (similar to check if user is logged in)
+* Extract post's body properties
+* Import 'surveys' model, create a survey instance from Survey class
+  * Convert array of strings (emails) to array of objects for Sub-document
+* **Flow :** Survey Instance + Email template = Mailer (Email Generation helper) -(http request)-> Send 'Mailer' to Email Provider
+
+---
+
+## Basic setup is done here. Only important pointers will be noted now
+
+---
+
+* Can't have destructing with arrow functions without the parenthesis
+* Forms
+  * Using React only for forms can create problems if we need to use the form's data in other components. We need to pass field inputs to a common parent and then pass the data on to target component
+  * Redux is a good alternative but then we will need to create many action creators, a reducer, form validation and stuffs
+  * Redux-forms makes is easier to handle forms with multiple fields with connecting it to redux store and validation logic
+* Wiring up redux-form
+
+  * **In client :** Install redux-form. Writing wizard form. Multiple pages
+  * Redux form brings its own reducer
+  * In reducers > index.js, `import reducer from 'redux-form'` and alias it to something unambiguous (reduxForm)
+  * Add this reduxForm in combineReducer with a key to save it in redux store
+  * Import a helper (reduxForm) from redux-form in the form component
+  * Redux form needs to ability to connect to the Redux store. reduxForm is similar to the connect helper of redux library and uses the same signature for export default. reduxForm however takes only 1 argument to customize how our form behaves
+  * Also import, Field component. Its a helper by reduxForm to render any type of traditional HTML component, TextArea, Checkbox etc. We need to provide a set of number minimum props to display any element
+  * type, name and component: name is any string and tells redux form to store its data under that name inside 'form' key. component is the field type and type is the exact type (text, checkbox, radio button etc)
+  * `component='input'` can be replaced with traditional "input" with custom react component
+  * Wrap field with `<form>` tag and give it an onSubmit function that is provided by redux-form. reduxForm connected to SurveyForm is plugging its own props to SurveyForm. One of those props is handleSubmit. It calls the arrow function we give it with "values" we enter in the form. Values will have the "key" that we specify in the "name" property of the field
+  * When giving custom react component to Field helper, it passes on its helper functions like onBlur, onChange as props so that we can implement them in the underlying custom component using ...
+  * **Validation :** Provide `validate` command in reduxForm connector which is a user defined function. It takes a single argument of values which is an object of all values in our form. Is called when there is any change in any field of the form. Returning an empty object indicates no errors in the form. For every field in form with error, assign the same field name as key with error name as value to the error object. This error object is passed to respective FIELD based on same key inside "meta" prop. "meta" has other properties like touched? active? etc. We can use "touched" in conjunction with "error" attributes of meta in FIELD to show the error from redux-form
+  * Redux-form discards all values from the store as soon as the form is unmounted or navigated away from. reduxForm helper (connector) takes an option property `destroyOnUnmount: false` to tell redux-form not to delete the values of the form
